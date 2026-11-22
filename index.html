@@ -378,6 +378,11 @@
             <span class="hidden sm:inline">API Яндекса</span>
             <span class="sm:hidden">API</span>
           </button>
+
+          <button id="btn-open-auth" type="button" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 text-xs font-semibold text-white transition cursor-pointer whitespace-nowrap">
+            <i data-lucide="user" class="w-3 h-3"></i>
+            <span id="auth-btn-label">Войти</span>
+          </button>
         </div>
       </header>
 
@@ -658,6 +663,38 @@
         <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-rose-900"></span>Глухая</span>
       </div>
     </main>
+
+    <!-- Auth Modal (Вход / Регистрация) -->
+    <div id="auth-modal" class="hidden fixed inset-0 z-50 bg-black/65 backdrop-blur-sm flex items-center justify-center p-4">
+      <div class="apple-glass rounded-3xl max-w-sm w-full p-5 space-y-4 text-white">
+        <div class="flex items-center justify-between">
+          <h3 id="auth-modal-title" class="text-base font-bold">Аккаунт</h3>
+          <button id="btn-close-auth" type="button" class="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 cursor-pointer">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <div id="auth-logged-in-box" class="hidden space-y-3">
+          <div class="bg-black/30 rounded-2xl p-3 border border-white/10">
+            <div class="text-xs text-slate-400">Вы вошли как</div>
+            <div id="auth-user-name" class="text-base font-bold text-white mt-0.5">--</div>
+            <span id="auth-user-role" class="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#0A84FF]/25 text-sky-300">Пользователь</span>
+          </div>
+          <button id="btn-auth-logout" type="button" class="w-full py-2 rounded-2xl bg-[#FF453A]/20 hover:bg-[#FF453A]/35 text-[#FF6961] text-xs font-bold cursor-pointer">Выйти из аккаунта</button>
+        </div>
+
+        <div id="auth-forms-box" class="space-y-3">
+          <div class="grid grid-cols-2 gap-1 bg-black/30 p-1 rounded-2xl border border-white/10">
+            <button id="tab-auth-login" type="button" class="py-1.5 rounded-xl text-xs font-bold bg-white/20 text-white cursor-pointer">Вход</button>
+            <button id="tab-auth-reg" type="button" class="py-1.5 rounded-xl text-xs font-semibold text-slate-300 cursor-pointer">Регистрация</button>
+          </div>
+          <input id="auth-username" type="text" placeholder="Логин (3–24 символа)" class="apple-input w-full rounded-xl px-3 py-2 text-sm" />
+          <input id="auth-password" type="password" placeholder="Пароль (от 6 символов)" class="apple-input w-full rounded-xl px-3 py-2 text-sm" />
+          <div id="auth-error-msg" class="hidden text-xs text-[#FF6961] bg-[#FF453A]/15 rounded-xl px-3 py-2"></div>
+          <button id="btn-auth-submit" type="button" class="w-full py-2.5 rounded-2xl apple-blue font-bold text-sm cursor-pointer">Войти</button>
+        </div>
+      </div>
+    </div>
 
     <!-- Toast Notification -->
     <div id="toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 apple-glass-pill text-white px-4 py-2.5 rounded-full text-xs sm:text-sm font-semibold max-w-md text-center"></div>
@@ -2718,17 +2755,76 @@
         }
       }
 
+      const AUTH_TOKEN_KEY = 'fp_auth_token_v1';
+      let currentUser = null;
+      let authMode = 'login';
+
+      function getAuthToken() {
+        try { return localStorage.getItem(AUTH_TOKEN_KEY) || ''; } catch (_) { return ''; }
+      }
+      function setAuthToken(tok) {
+        try {
+          if (tok) localStorage.setItem(AUTH_TOKEN_KEY, tok);
+          else localStorage.removeItem(AUTH_TOKEN_KEY);
+        } catch (_) {}
+      }
+      function isAdminUser() {
+        return Boolean(currentUser && currentUser.role === 'admin');
+      }
+      function updateAuthUI() {
+        const lbl = document.getElementById('auth-btn-label');
+        const loggedBox = document.getElementById('auth-logged-in-box');
+        const formsBox = document.getElementById('auth-forms-box');
+        if (currentUser) {
+          if (lbl) lbl.textContent = currentUser.role === 'admin' ? `${currentUser.username} (Админ)` : currentUser.username;
+          if (loggedBox) loggedBox.classList.remove('hidden');
+          if (formsBox) formsBox.classList.add('hidden');
+          const uName = document.getElementById('auth-user-name');
+          const uRole = document.getElementById('auth-user-role');
+          if (uName) uName.textContent = currentUser.username;
+          if (uRole) {
+            uRole.textContent = currentUser.role === 'admin' ? 'Администратор' : 'Пользователь';
+            uRole.className = currentUser.role === 'admin'
+              ? 'inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/25 text-amber-300'
+              : 'inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#0A84FF]/25 text-sky-300';
+          }
+        } else {
+          if (lbl) lbl.textContent = 'Войти';
+          if (loggedBox) loggedBox.classList.add('hidden');
+          if (formsBox) formsBox.classList.remove('hidden');
+        }
+        if (dom.btnMdDelete) dom.btnMdDelete.classList.toggle('hidden', !isAdminUser());
+      }
+      function openAuthModal() {
+        updateAuthUI();
+        const errEl = document.getElementById('auth-error-msg');
+        if (errEl) errEl.classList.add('hidden');
+        const modal = document.getElementById('auth-modal');
+        if (modal) modal.classList.remove('hidden');
+      }
+
       async function apiSyncRequest(path, method, payload) {
         if (!SERVER_SYNC_ACTIVE) return null;
         try {
           const opts = { method: method || 'GET', headers: {} };
+          const tok = getAuthToken();
+          if (tok) opts.headers['Authorization'] = 'Bearer ' + tok;
           if (payload !== undefined) {
             opts.headers['Content-Type'] = 'application/json';
             opts.body = JSON.stringify(payload);
           }
           const resp = await fetch(path, opts);
-          if (!resp.ok) return null;
-          return await resp.json();
+          const data = await resp.json().catch(() => ({}));
+          if (!resp.ok) {
+            if (resp.status === 401 && !path.includes('/api/auth/')) {
+              showToast(data.error || 'Войдите в аккаунт');
+              openAuthModal();
+            } else if (data && data.error) {
+              showToast(data.error);
+            }
+            return { ...data, ok: false, __status: resp.status };
+          }
+          return data;
         } catch (_) {
           return null;
         }
@@ -3619,6 +3715,7 @@
         }
 
         dom.mdNewCommentInput.value = '';
+        dom.btnMdDelete.classList.toggle('hidden', !isAdminUser());
         dom.markerDetailModal.classList.remove('hidden');
       }
 
@@ -4285,6 +4382,70 @@
             if (state.activeSidebarTab === 'markers') renderMarkersSidebarList();
           }
         }, 30000);
+
+        // Инициализация авторизации
+        const authModal = document.getElementById('auth-modal');
+        const btnOpenAuth = document.getElementById('btn-open-auth');
+        const btnCloseAuth = document.getElementById('btn-close-auth');
+        const tabLogin = document.getElementById('tab-auth-login');
+        const tabReg = document.getElementById('tab-auth-reg');
+        const btnAuthSubmit = document.getElementById('btn-auth-submit');
+        const btnAuthLogout = document.getElementById('btn-auth-logout');
+        const authErr = document.getElementById('auth-error-msg');
+
+        if (btnOpenAuth) btnOpenAuth.addEventListener('click', openAuthModal);
+        if (btnCloseAuth) btnCloseAuth.addEventListener('click', () => authModal.classList.add('hidden'));
+        if (authModal) authModal.addEventListener('click', (e) => { if (e.target === authModal) authModal.classList.add('hidden'); });
+
+        const setAuthTab = (mode) => {
+          authMode = mode;
+          tabLogin.className = mode === 'login' ? 'py-1.5 rounded-xl text-xs font-bold bg-white/20 text-white cursor-pointer' : 'py-1.5 rounded-xl text-xs font-semibold text-slate-300 cursor-pointer';
+          tabReg.className = mode === 'register' ? 'py-1.5 rounded-xl text-xs font-bold bg-white/20 text-white cursor-pointer' : 'py-1.5 rounded-xl text-xs font-semibold text-slate-300 cursor-pointer';
+          btnAuthSubmit.textContent = mode === 'login' ? 'Войти' : 'Зарегистрироваться';
+          authErr.classList.add('hidden');
+        };
+        if (tabLogin) tabLogin.addEventListener('click', () => setAuthTab('login'));
+        if (tabReg) tabReg.addEventListener('click', () => setAuthTab('register'));
+
+        if (btnAuthSubmit) btnAuthSubmit.addEventListener('click', async () => {
+          const username = document.getElementById('auth-username').value.trim();
+          const password = document.getElementById('auth-password').value;
+          const endpoint = authMode === 'login' ? './api/auth/login' : './api/auth/register';
+          const res = await apiSyncRequest(endpoint, 'POST', { username, password });
+          if (res && res.ok && res.token) {
+            setAuthToken(res.token);
+            currentUser = res.user;
+            updateAuthUI();
+            authModal.classList.add('hidden');
+            showToast(`Добро пожаловать, ${currentUser.username}!`);
+            syncMarkersFromServer(true);
+          } else {
+            authErr.textContent = (res && res.error) || 'Ошибка авторизации';
+            authErr.classList.remove('hidden');
+          }
+        });
+
+        if (btnAuthLogout) btnAuthLogout.addEventListener('click', async () => {
+          await apiSyncRequest('./api/auth/logout', 'POST', {});
+          setAuthToken('');
+          currentUser = null;
+          updateAuthUI();
+          authModal.classList.add('hidden');
+          showToast('Вы вышли из аккаунта');
+        });
+
+        if (SERVER_SYNC_ACTIVE && getAuthToken()) {
+          apiSyncRequest('./api/auth/me', 'GET').then(res => {
+            if (res && res.ok && res.user) {
+              currentUser = res.user;
+            } else {
+              setAuthToken('');
+            }
+            updateAuthUI();
+          });
+        } else {
+          updateAuthUI();
+        }
       }
 
       if (document.readyState === 'loading') {
