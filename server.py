@@ -25,8 +25,8 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "fake_police.db")
 INDEX_PATH = os.path.join(BASE_DIR, "index.html")
 
-ADMIN_USERNAME = os.environ.get("ADMIN_USER", "admin").strip()
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin12345")
+ADMIN_USERNAME = os.environ.get("ADMIN_USER", "").strip()
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 SESSION_TTL_SEC = 30 * 24 * 3600  # 30 дней
 
 DB_LOCK = threading.Lock()
@@ -120,14 +120,21 @@ def init_db():
             )
             """
         )
-        # Создаём или обновляем аккаунт администратора
-        row = conn.execute("SELECT id FROM users WHERE username = ?", (ADMIN_USERNAME,)).fetchone()
-        if not row:
+        # Удаляем старых админов, если логин сменился, и создаём/обновляем актуального только из переменных среды
+        if ADMIN_USERNAME and ADMIN_PASSWORD:
+            conn.execute("DELETE FROM users WHERE role = 'admin' AND username != ?", (ADMIN_USERNAME,))
             salt, pwd_hash = hash_password(ADMIN_PASSWORD)
-            conn.execute(
-                "INSERT INTO users (username, password_hash, salt, role, created_at) VALUES (?, ?, ?, 'admin', ?)",
-                (ADMIN_USERNAME, pwd_hash, salt, int(time.time() * 1000)),
-            )
+            row = conn.execute("SELECT id FROM users WHERE username = ?", (ADMIN_USERNAME,)).fetchone()
+            if not row:
+                conn.execute(
+                    "INSERT INTO users (username, password_hash, salt, role, created_at) VALUES (?, ?, ?, 'admin', ?)",
+                    (ADMIN_USERNAME, pwd_hash, salt, int(time.time() * 1000)),
+                )
+            else:
+                conn.execute(
+                    "UPDATE users SET password_hash = ?, salt = ?, role = 'admin' WHERE id = ?",
+                    (pwd_hash, salt, row[0]),
+                )
         conn.commit()
 
 
@@ -490,7 +497,7 @@ class FakePoliceHandler(BaseHTTPRequestHandler):
                 if not ok1:
                     self._send_json({"ok": False, "error": f"Защита от спама: следующую метку можно поставить через {wait1} сек."}, 429)
                     return
-                ok2, wait2 = check_rate_limit(f"mk_hour:{user['id']}", 5, 3600)
+                ok2, _ = check_rate_limit(f"mk_hour:{user['id']}", 5, 3600)
                 if not ok2:
                     self._send_json({"ok": False, "error": "Лимит: не более 5 меток в час"}, 429)
                     return
@@ -575,7 +582,7 @@ if __name__ == "__main__":
     init_db()
     server = ThreadingHTTPServer((HOST, PORT), FakePoliceHandler)
     print(f"Fake Police сервер запущен: http://localhost:{PORT}")
-    print(f"База данных: {DB_PATH} | Админ: {ADMIN_USERNAME}")
+    print(f"База данных: {DB_PATH} | Админ: {ADMIN_USERNAME or 'не задан (укажите ADMIN_USER и ADMIN_PASSWORD)'}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
