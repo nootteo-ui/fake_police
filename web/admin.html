@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AIRoute — Панель администратора (ПК)</title>
+  <style>
+    :root {
+      --bg: #0f131a;
+      --card: rgba(26, 32, 44, 0.78);
+      --card-solid: #181e29;
+      --border: rgba(255, 255, 255, 0.10);
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --blue: #0a84ff;
+      --green: #22c55e;
+      --amber: #f59e0b;
+      --red: #ff453a;
+      --radius: 16px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+      background: radial-gradient(circle at 15% 10%, #17253b 0%, var(--bg) 55%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    header {
+      position: sticky; top: 0; z-index: 20;
+      backdrop-filter: blur(18px);
+      background: rgba(15, 19, 26, 0.82);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 28px;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .logo-pill {
+      width: 38px; height: 38px; border-radius: 12px;
+      background: linear-gradient(135deg, #ff3b30 0%, #0a84ff 100%);
+      display: grid; place-items: center; font-weight: 900; font-size: 14px; color: #fff;
+      box-shadow: 0 6px 18px rgba(10, 132, 255, 0.35);
+    }
+    .brand h1 { font-size: 18px; font-weight: 800; letter-spacing: -0.3px; }
+    .brand span { font-size: 12px; color: var(--muted); display: block; }
+    .header-actions { display: flex; align-items: center; gap: 10px; }
+    .badge {
+      padding: 5px 11px; border-radius: 999px; font-size: 12px; font-weight: 700;
+      background: rgba(10, 132, 255, 0.16); color: #60a5fa; border: 1px solid rgba(10, 132, 255, 0.3);
+    }
+    .badge.warn { background: rgba(245, 158, 11, 0.16); color: #fbbf24; border-color: rgba(245, 158, 11, 0.35); }
+    .badge.danger { background: rgba(255, 69, 58, 0.16); color: #f87171; border-color: rgba(255, 69, 58, 0.35); }
+    .badge.ok { background: rgba(34, 197, 94, 0.16); color: #4ade80; border-color: rgba(34, 197, 94, 0.35); }
+
+    button, .btn {
+      border: 1px solid var(--border); background: rgba(255,255,255,0.06); color: var(--text);
+      padding: 8px 14px; border-radius: 11px; font-size: 13px; font-weight: 700;
+      cursor: pointer; transition: 0.16s ease; display: inline-flex; align-items: center; gap: 6px;
+    }
+    button:hover { background: rgba(255,255,255,0.12); }
+    button.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
+    button.primary:hover { filter: brightness(1.08); }
+    button.success { background: rgba(34, 197, 94, 0.18); border-color: rgba(34, 197, 94, 0.4); color: #4ade80; }
+    button.warning { background: rgba(245, 158, 11, 0.18); border-color: rgba(245, 158, 11, 0.4); color: #fbbf24; }
+    button.danger { background: rgba(255, 69, 58, 0.18); border-color: rgba(255, 69, 58, 0.4); color: #f87171; }
+    button.sm { padding: 5px 10px; font-size: 12px; border-radius: 9px; }
+
+    input, select {
+      background: rgba(255,255,255,0.06); border: 1px solid var(--border); color: var(--text);
+      padding: 9px 13px; border-radius: 11px; font-size: 13.5px; outline: none;
+    }
+    input:focus, select:focus { border-color: var(--blue); }
+
+    .container { max-width: 1360px; margin: 0 auto; padding: 22px 28px 60px; }
+
+    /* Login Card */
+    .login-wrap {
+      max-width: 430px; margin: 70px auto; background: var(--card);
+      border: 1px solid var(--border); border-radius: 22px; padding: 26px;
+      backdrop-filter: blur(20px); box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+    }
+    .login-wrap h2 { font-size: 20px; font-weight: 800; margin-bottom: 6px; }
+    .login-wrap p { font-size: 13px; color: var(--muted); margin-bottom: 18px; }
+    .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+    .field label { font-size: 12px; font-weight: 700; color: var(--muted); }
+
+    /* Stats & Tabs */
+    .stats-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px;
+    }
+    .stat-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 16px 18px;
+    }
+    .stat-card .lbl { font-size: 11.5px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; }
+    .stat-card .val { font-size: 26px; font-weight: 900; margin-top: 4px; }
+
+    .tabs {
+      display: flex; gap: 8px; margin-bottom: 18px; border-bottom: 1px solid var(--border); padding-bottom: 12px;
+    }
+    .tab-btn {
+      padding: 9px 16px; border-radius: 999px; font-size: 13.5px; font-weight: 800;
+      background: transparent; border: 1px solid transparent; color: var(--muted);
+    }
+    .tab-btn.active {
+      background: rgba(10, 132, 255, 0.18); border-color: rgba(10, 132, 255, 0.4); color: #fff;
+    }
+
+    .toolbar {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .toolbar-left { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+    .panel {
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+      overflow: hidden;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+    th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
+    th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); background: rgba(255,255,255,0.03); }
+    tr:hover td { background: rgba(255,255,255,0.025); }
+
+    .comment-list { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+    .comment-pill {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+      padding: 6px 10px; border-radius: 10px; font-size: 12.5px;
+    }
+
+    /* Drawer / Modal for User Actions & Ban */
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.62); backdrop-filter: blur(6px);
+      display: none; align-items: center; justify-content: center; z-index: 50; padding: 20px;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      width: 100%; max-width: 680px; max-height: 88vh; overflow-y: auto;
+      background: var(--card-solid); border: 1px solid var(--border); border-radius: 22px; padding: 22px;
+      box-shadow: 0 28px 80px rgba(0,0,0,0.6);
+    }
+    .modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .action-item {
+      display: flex; justify-content: space-between; gap: 12px;
+      padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border); margin-bottom: 8px; font-size: 13px;
+    }
+    .toast {
+      position: fixed; bottom: 22px; right: 22px; z-index: 99;
+      background: #1e293b; color: #fff; border: 1px solid var(--border);
+      padding: 11px 16px; border-radius: 12px; font-size: 13px; font-weight: 700;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.45); display: none;
+    }
+    @media (max-width: 860px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      header, .container { padding-left: 14px; padding-right: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="logo-pill">AIR</div>
+      <div>
+        <h1>AIRoute · Админ-панель ПК</h1>
+        <span>Модерация меток, комментариев, песочница новичков и управление пользователями</span>
+      </div>
+    </div>
+    <div class="header-actions" id="headerUserBox" style="display:none;">
+      <span class="badge ok" id="adminNameBadge">Администратор</span>
+      <button class="sm" onclick="refreshAll()">↻ Обновить</button>
+      <button class="sm danger" onclick="logoutAdmin()">Выйти</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- ЭКРАН ВХОДА -->
+    <div id="loginView" class="login-wrap">
+      <h2>Вход в веб-админку</h2>
+      <p>Укажите адрес API сервера и данные учётной записи администратора.</p>
+      <div class="field">
+        <label>URL API сервера</label>
+        <input id="apiBaseInput" type="text" placeholder="https://ваш-сервер.ru" />
+      </div>
+      <div class="field">
+        <label>Логин или Email администратора</label>
+        <input id="loginUserInput" type="text" placeholder="admin" />
+      </div>
+      <div class="field">
+        <label>Пароль</label>
+        <input id="loginPassInput" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')loginAdmin()" />
+      </div>
+      <button class="primary" style="width:100%; justify-content:center; padding:11px;" onclick="loginAdmin()">
+        Войти в панель
+      </button>
+      <p id="loginError" style="color:#f87171; margin-top:10px; font-weight:700;"></p>
+    </div>
+
+    <!-- ОСНОВНАЯ ПАНЕЛЬ -->
+    <div id="adminView" style="display:none;">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="lbl">Активных меток</div>
+          <div class="val" id="statActive">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="lbl">Ожидают проверки (новички)</div>
+          <div class="val" style="color:#fbbf24;" id="statPending">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="lbl">Всего пользователей</div>
+          <div class="val" id="statUsers">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="lbl">В бане / Shadowban</div>
+          <div class="val" style="color:#f87171;" id="statBanned">0</div>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <button class="tab-btn active" id="tabBtnMarkers" onclick="switchTab('markers')">📍 Метки и комментарии</button>
+        <button class="tab-btn" id="tabBtnPending" onclick="switchTab('pending')">⏳ Очередь новичков (&gt;2/час)</button>
+        <button class="tab-btn" id="tabBtnUsers" onclick="switchTab('users')">👥 Пользователи и блокировки</button>
+      </div>
+
+      <!-- ВКЛАДКА 1: АКТИВНЫЕ МЕТКИ И УДАЛЕНИЕ КОММЕНТАРИЕВ -->
+      <div id="tabMarkers">
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <input id="markerSearch" type="text" placeholder="Поиск по адресу, автору или комментарию..." oninput="renderMarkers()" style="min-width:290px;" />
+            <select id="markerTypeFilter" onchange="renderMarkers()">
+              <option value="all">Все типы меток</option>
+              <option value="dps">ДПС / Патруль</option>
+              <option value="camera">Камера / Радар</option>
+              <option value="dtp">ДТП</option>
+              <option value="works">Дорожные работы</option>
+            </select>
+          </div>
+          <span style="font-size:12.5px; color:var(--muted);">Удаление комментариев доступно прямо в строке метки</span>
+        </div>
+        <div class="panel">
+          <table>
+            <thead>
+              <tr>
+                <th>Тип / Статус</th>
+                <th>Адрес и координаты</th>
+                <th>Автор</th>
+                <th>Комментарии водителей (удаление)</th>
+                <th>Действия</th>
+              </tr>
+            </thead>
+            <tbody id="markersTbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ВКЛАДКА 2: ОЧЕРЕДЬ МОДЕРАЦИИ НОВИЧКОВ -->
+      <div id="tabPending" style="display:none;">
+        <div class="panel">
+          <table>
+            <thead>
+              <tr>
+                <th>Метка</th>
+                <th>Адрес</th>
+                <th>Автор (Новичок)</th>
+                <th>Создана</th>
+                <th>Решение</th>
+              </tr>
+            </thead>
+            <tbody id="pendingTbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ВКЛАДКА 3: ПОЛЬЗОВАТЕЛИ, ИСТОРИЯ ДЕЙСТВИЙ, БАН И SHADOWBAN -->
+      <div id="tabUsers" style="display:none;">
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <input id="userSearch" type="text" placeholder="Поиск по логину или email..." oninput="renderUsers()" style="min-width:280px;" />
+            <select id="userStatusFilter" onchange="renderUsers()">
+              <option value="all">Все пользователи</option>
+              <option value="novice">Новички (&lt; 45 очков)</option>
+              <option value="shadow">В теневом бане</option>
+              <option value="blocked">Заблокированные</option>
+              <option value="risk">Риск (&gt;80% отклонённых)</option>
+            </select>
+          </div>
+          <button class="sm" onclick="loadUsers()">Обновить список</button>
+        </div>
+        <div class="panel">
+          <table>
+            <thead>
+              <tr>
+                <th>Пользователь / Email</th>
+                <th>Ранг и рейтинг</th>
+                <th>Статистика меток</th>
+                <th>Статус модерации</th>
+                <th>Управление</th>
+              </tr>
+            </thead>
+            <tbody id="usersTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- МОДАЛЬНОЕ ОКНО: ИСТОРИЯ ДЕЙСТВИЙ + НАЗНАЧЕНИЕ БАНА / SHADOWBAN НА СРОК -->
+  <div class="modal-backdrop" id="userModal" onclick="if(event.target===this)closeUserModal()">
+    <div class="modal">
+      <div class="modal-head">
+        <div>
+          <h3 id="modalUserTitle" style="font-size:18px; font-weight:800;">Пользователь</h3>
+          <span id="modalUserSub" style="font-size:12.5px; color:var(--muted);"></span>
+        </div>
+        <button class="sm" onclick="closeUserModal()">✕ Закрыть</button>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; background:rgba(255,255,255,0.03); padding:12px; border-radius:14px; border:1px solid var(--border);">
+        <div>
+          <div style="font-size:11.5px; font-weight:700; color:var(--muted); margin-bottom:6px;">Срок наказания (в часах)</div>
+          <div style="display:flex; gap:6px;">
+            <select id="banHoursPreset" onchange="document.getElementById('banHoursCustom').value=this.value">
+              <option value="6">6 часов</option>
+              <option value="24" selected>24 часа</option>
+              <option value="72">3 дня (72 ч)</option>
+              <option value="168">7 дней (168 ч)</option>
+              <option value="720">30 дней (720 ч)</option>
+              <option value="0">Навсегда (для бана)</option>
+            </select>
+            <input id="banHoursCustom" type="number" value="24" style="width:90px;" title="Часов" />
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11.5px; font-weight:700; color:var(--muted); margin-bottom:6px;">Причина / комментарий</div>
+          <input id="banReasonInput" type="text" placeholder="Фейковые посты / спам" style="width:100%;" />
+        </div>
+        <div style="grid-column:1 / -1; display:flex; flex-wrap:wrap; gap:8px; margin-top:4px;">
+          <button class="danger sm" onclick="applyUserBlock(true)">🚫 Заблокировать</button>
+          <button class="success sm" onclick="applyUserBlock(false)">✓ Снять блок</button>
+          <button class="warning sm" onclick="applyUserShadowban(true)">👻 Назначить теневой бан</button>
+          <button class="sm" onclick="applyUserShadowban(false)">👁 Снять теневой бан</button>
+        </div>
+      </div>
+
+      <h4 style="font-size:12px; text-transform:uppercase; letter-spacing:0.5px; color:var(--muted); margin-bottom:8px;">
+        Полная история действий пользователя
+      </h4>
+      <div id="userActionsList"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    let API_BASE = localStorage.getItem('airoute_admin_api') || window.location.origin;
+    let TOKEN = localStorage.getItem('airoute_admin_token') || '';
+    let markers = [];
+    let pendingMarkers = [];
+    let users = [];
+    let selectedUser = null;
+
+    document.getElementById('apiBaseInput').value = API_BASE;
+
+    function showToast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.style.display = 'block';
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => el.style.display = 'none', 3200);
+    }
+
+    async function api(path, opts = {}) {
+      const headers = Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {});
+      if (TOKEN) headers['Authorization'] = 'Bearer ' + TOKEN;
+      const res = await fetch(API_BASE.replace(/\/+$/, '') + path, { ...opts, headers });
+      const data = await res.json().catch(() => ({ ok: false, error: 'HTTP ' + res.status }));
+      return { status: res.status, data };
+    }
+
+    async function loginAdmin() {
+      API_BASE = document.getElementById('apiBaseInput').value.trim() || window.location.origin;
+      localStorage.setItem('airoute_admin_api', API_BASE);
+      const username = document.getElementById('loginUserInput').value.trim();
+      const password = document.getElementById('loginPassInput').value;
+      const errEl = document.getElementById('loginError');
+      errEl.textContent = '';
+
+      const { data } = await api('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ username, email: username, password })
+      });
+      if (!data.ok || !data.token) {
+        errEl.textContent = data.error || 'Ошибка входа';
+        return;
+      }
+      if (!data.user || !data.user.isAdmin) {
+        errEl.textContent = 'У этой учётной записи нет прав администратора';
+        return;
+      }
+      TOKEN = data.token;
+      localStorage.setItem('airoute_admin_token', TOKEN);
+      enterPanel(data.user);
+    }
+
+    function logoutAdmin() {
+      TOKEN = '';
+      localStorage.removeItem('airoute_admin_token');
+      document.getElementById('adminView').style.display = 'none';
+      document.getElementById('headerUserBox').style.display = 'none';
+      document.getElementById('loginView').style.display = 'block';
+    }
+
+    async function enterPanel(user) {
+      document.getElementById('loginView').style.display = 'none';
+      document.getElementById('adminView').style.display = 'block';
+      document.getElementById('headerUserBox').style.display = 'flex';
+      document.getElementById('adminNameBadge').textContent = '★ ' + (user.username || 'Админ');
+      await refreshAll();
+    }
+
+    async function refreshAll() {
+      await Promise.all([loadMarkers(), loadPending(), loadUsers()]);
+    }
+
+    function switchTab(name) {
+      ['markers', 'pending', 'users'].forEach(t => {
+        document.getElementById('tab' + t[0].toUpperCase() + t.slice(1)).style.display = (t === name) ? 'block' : 'none';
+        document.getElementById('tabBtn' + t[0].toUpperCase() + t.slice(1)).classList.toggle('active', t === name);
+      });
+    }
+
+    async function loadMarkers() {
+      const { data } = await api('/api/markers');
+      markers = (data.markers || []);
+      document.getElementById('statActive').textContent = markers.length;
+      renderMarkers();
+    }
+
+    function renderMarkers() {
+      const q = document.getElementById('markerSearch').value.trim().toLowerCase();
+      const typeF = document.getElementById('markerTypeFilter').value;
+      const tbody = document.getElementById('markersTbody');
+      const filtered = markers.filter(m => {
+        if (typeF !== 'all' && m.type !== typeF) return false;
+        if (!q) return true;
+        const commentsStr = (m.comments || []).map(c => `${c.author} ${c.text}`).join(' ').toLowerCase();
+        return (m.address || '').toLowerCase().includes(q) ||
+               (m.createdByUsername || '').toLowerCase().includes(q) ||
+               commentsStr.includes(q);
+      });
+
+      tbody.innerHTML = filtered.map(m => {
+        const comments = (m.comments || []);
+        const commentsHtml = comments.length === 0
+          ? '<span style="color:var(--muted); font-size:12px;">Нет комментариев</span>'
+          : `<div class="comment-list">` + comments.map((c, idx) => `
+              <div class="comment-pill">
+                <div><b>${esc(c.author)}:</b> ${esc(c.text)} <span style="color:var(--muted); font-size:11px;">(${fmtTime(c.ts)})</span></div>
+                <button class="danger sm" onclick='deleteComment(${JSON.stringify(m.id)}, ${JSON.stringify(c)})'>Удалить</button>
+              </div>
+            `).join('') + `</div>`;
+
+        return `
+          <tr>
+            <td>
+              <span class="badge">${esc((m.type || 'dps').toUpperCase())}</span>
+              <div style="margin-top:6px; font-size:12px; color:#4ade80;">✓ ${m.confirmations || 0} · ✕ ${m.dismissals || 0}</div>
+            </td>
+            <td>
+              <div style="font-weight:700;">${esc(m.address || 'Без адреса')}</div>
+              <div style="font-size:12px; color:var(--muted);">${Number(m.lat).toFixed(5)}, ${Number(m.lng).toFixed(5)}</div>
+            </td>
+            <td>
+              <div style="font-weight:700;">${esc(m.createdByUsername || '—')}</div>
+              <div style="font-size:11.5px; color:var(--muted);">${fmtTime(m.createdAt)}</div>
+            </td>
+            <td style="min-width:300px;">${commentsHtml}</td>
+            <td>
+              <button class="danger sm" onclick='deleteMarker(${JSON.stringify(m.id)})'>Удалить метку</button>
+            </td>
+          </tr>
+        `;
+      }).join('') || '<tr><td colspan="5" style="text-align:center; color:var(--muted); padding:24px;">Меток не найдено</td></tr>';
+    }
+
+    async function deleteComment(markerId, comment) {
+      const { data } = await api(`/api/markers/${encodeURIComponent(markerId)}/comments/delete`, {
+        method: 'POST',
+        body: JSON.stringify({ author: comment.author, text: comment.text, ts: comment.ts })
+      });
+      if (data.ok) {
+        showToast('Комментарий удалён');
+        await loadMarkers();
+      } else {
+        showToast('Ошибка: ' + (data.error || 'не удалось удалить'));
+      }
+    }
+
+    async function deleteMarker(markerId) {
+      const { data } = await api(`/api/markers/${encodeURIComponent(markerId)}`, { method: 'DELETE' });
+      if (data.ok) {
+        showToast('Метка удалена');
+        await refreshAll();
+      } else {
+        showToast('Ошибка: ' + (data.error || 'не удалось удалить'));
+      }
+    }
+
+    async function loadPending() {
+      const { data } = await api('/api/admin/markers/pending');
+      pendingMarkers = data.markers || [];
+      document.getElementById('statPending').textContent = pendingMarkers.length;
+      const tbody = document.getElementById('pendingTbody');
+      tbody.innerHTML = pendingMarkers.map(m => `
+        <tr>
+          <td><span class="badge warn">${esc((m.type || 'dps').toUpperCase())}</span></td>
+          <td><b>${esc(m.address || 'Без адреса')}</b><div style="font-size:12px; color:var(--muted);">${Number(m.lat).toFixed(5)}, ${Number(m.lng).toFixed(5)}</div></td>
+          <td>${esc(m.createdByUsername || 'Новичок')}</td>
+          <td>${fmtTime(m.createdAt)}</td>
+          <td style="display:flex; gap:8px;">
+            <button class="success sm" onclick='approvePending(${JSON.stringify(m.id)})'>✓ Одобрить</button>
+            <button class="danger sm" onclick='deleteMarker(${JSON.stringify(m.id)})'>✕ Отклонить</button>
+          </td>
+        </tr>
+      `).join('') || '<tr><td colspan="5" style="text-align:center; color:var(--muted); padding:24px;">Очередь проверки пуста</td></tr>';
+    }
+
+    async function approvePending(markerId) {
+      const { data } = await api(`/api/admin/markers/${encodeURIComponent(markerId)}/approve`, { method: 'POST', body: '{}' });
+      if (data.ok) {
+        showToast('Метка одобрена');
+        await refreshAll();
+      } else {
+        showToast('Ошибка: ' + (data.error || ''));
+      }
+    }
+
+    async function loadUsers() {
+      const { data } = await api('/api/admin/users');
+      users = data.users || [];
+      document.getElementById('statUsers').textContent = users.length;
+      const bannedCount = users.filter(u => isBlocked(u) || isShadow(u)).length;
+      document.getElementById('statBanned').textContent = bannedCount;
+      renderUsers();
+    }
+
+    function isBlocked(u) {
+      const until = u.blocked_until || u.blockedUntil;
+      if (until && Number(until) > Date.now()) return true;
+      return Boolean(u.is_blocked || u.isBlocked) && !until;
+    }
+
+    function isShadow(u) {
+      const until = u.shadowbanned_until || u.shadowbannedUntil;
+      if (until && Number(until) > Date.now()) return true;
+      return Boolean(u.shadowbanned || u.isShadowbanned) && !until;
+    }
+
+    function tierName(pts) {
+      if (pts >= 900) return 'Легенда дорог';
+      if (pts >= 375) return 'Патрульный';
+      if (pts >= 150) return 'Штурман';
+      if (pts >= 45) return 'Наблюдатель';
+      return 'Новичок';
+    }
+
+    function renderUsers() {
+      const q = document.getElementById('userSearch').value.trim().toLowerCase();
+      const st = document.getElementById('userStatusFilter').value;
+      const tbody = document.getElementById('usersTbody');
+      const filtered = users.filter(u => {
+        const rating = Number(u.rating || 0);
+        const conf = Number(u.confirmed_markers || u.confirmedMarkers || 0);
+        const rej = Number(u.rejected_markers || u.rejectedMarkers || 0);
+        const ratio = (conf + rej) > 0 ? rej / (conf + rej) : 0;
+        if (st === 'novice' && rating >= 45) return false;
+        if (st === 'shadow' && !isShadow(u)) return false;
+        if (st === 'blocked' && !isBlocked(u)) return false;
+        if (st === 'risk' && ratio <= 0.80) return false;
+        if (!q) return true;
+        return (u.username || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q);
+      });
+
+      tbody.innerHTML = filtered.map(u => {
+        const rating = Number(u.rating || 0);
+        const conf = Number(u.confirmed_markers || u.confirmedMarkers || 0);
+        const rej = Number(u.rejected_markers || u.rejectedMarkers || 0);
+        const pct = (conf + rej) > 0 ? Math.round(rej * 100 / (conf + rej)) : 0;
+        let statusHtml = '<span class="badge ok">Активен</span>';
+        if (isBlocked(u)) statusHtml = `<span class="badge danger">Заблокирован ${fmtUntil(u.blocked_until || u.blockedUntil)}</span>`;
+        else if (isShadow(u)) statusHtml = `<span class="badge warn">Теневой бан ${fmtUntil(u.shadowbanned_until || u.shadowbannedUntil)}</span>`;
+
+        return `
+          <tr>
+            <td>
+              <div style="font-weight:800;">${esc(u.username)} ${u.is_admin || u.isAdmin ? '👑' : ''}</div>
+              <div style="font-size:12px; color:var(--muted);">${esc(u.email || 'без email')}</div>
+            </td>
+            <td>
+              <div style="font-weight:800; color:#fbbf24;">★ ${rating}</div>
+              <div style="font-size:12px; color:var(--muted);">${tierName(rating)}</div>
+            </td>
+            <td>
+              <div>Подтв.: <b>${conf}</b> · Откл.: <b>${rej}</b> (${pct}%)</div>
+            </td>
+            <td>${statusHtml}</td>
+            <td>
+              <button class="primary sm" onclick='openUserModal(${JSON.stringify(u)})'>Действия и бан</button>
+            </td>
+          </tr>
+        `;
+      }).join('') || '<tr><td colspan="5" style="text-align:center; color:var(--muted); padding:24px;">Пользователи не найдены</td></tr>';
+    }
+
+    async function openUserModal(u) {
+      selectedUser = u;
+      document.getElementById('modalUserTitle').textContent = `${u.username} (★ ${u.rating || 0})`;
+      document.getElementById('modalUserSub').textContent = `${u.email || 'Email не указан'} · ID: ${u.id}`;
+      document.getElementById('userModal').classList.add('open');
+      const listEl = document.getElementById('userActionsList');
+      listEl.innerHTML = '<div style="color:var(--muted); padding:14px;">Загрузка истории действий...</div>';
+      const { data } = await api(`/api/admin/users/${encodeURIComponent(u.id)}/actions`);
+      const actions = data.actions || [];
+      listEl.innerHTML = actions.map(a => `
+        <div class="action-item">
+          <div>
+            <div style="font-weight:700;">${esc(a.title)}</div>
+            <div style="font-size:12px; color:var(--muted);">${esc(a.details || '')}</div>
+          </div>
+          <div style="font-size:11.5px; color:var(--muted); white-space:nowrap;">${fmtTime(a.ts)}</div>
+        </div>
+      `).join('') || '<div style="color:var(--muted); padding:14px;">Записей о действиях пока нет.</div>';
+    }
+
+    function closeUserModal() {
+      document.getElementById('userModal').classList.remove('open');
+    }
+
+    async function applyUserBlock(block) {
+      if (!selectedUser) return;
+      const h = Number(document.getElementById('banHoursCustom').value || 0);
+      const reason = document.getElementById('banReasonInput').value.trim();
+      const { data } = await api(`/api/admin/users/${encodeURIComponent(selectedUser.id)}/block`, {
+        method: 'POST',
+        body: JSON.stringify({ blocked: block, durationHours: h > 0 ? h : null, reason })
+      });
+      if (data.ok) {
+        showToast(block ? 'Пользователь заблокирован' : 'Блокировка снята');
+        await loadUsers();
+        const updated = users.find(x => x.id === selectedUser.id);
+        if (updated) openUserModal(updated);
+      } else {
+        showToast('Ошибка: ' + (data.error || ''));
+      }
+    }
+
+    async function applyUserShadowban(shadowban) {
+      if (!selectedUser) return;
+      const h = Math.max(1, Number(document.getElementById('banHoursCustom').value || 24));
+      const reason = document.getElementById('banReasonInput').value.trim();
+      const { data } = await api(`/api/admin/users/${encodeURIComponent(selectedUser.id)}/shadowban`, {
+        method: 'POST',
+        body: JSON.stringify({ shadowbanned: shadowban, durationHours: shadowban ? h : 0, reason })
+      });
+      if (data.ok) {
+        showToast(shadowban ? `Теневой бан назначен на ${h} ч` : 'Теневой бан снят');
+        await loadUsers();
+        const updated = users.find(x => x.id === selectedUser.id);
+        if (updated) openUserModal(updated);
+      } else {
+        showToast('Ошибка: ' + (data.error || ''));
+      }
+    }
+
+    function fmtTime(ts) {
+      if (!ts) return '—';
+      const d = new Date(Number(ts));
+      return d.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    }
+
+    function fmtUntil(ts) {
+      if (!ts) return 'навсегда';
+      return 'до ' + fmtTime(ts);
+    }
+
+    function esc(s) {
+      return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    // Авто-вход при наличии токена
+    (async () => {
+      if (!TOKEN) return;
+      const { data } = await api('/api/auth/me');
+      if (data.ok && data.user && data.user.isAdmin) {
+        enterPanel(data.user);
+      }
+    })();
+  </script>
+</body>
+</html>
